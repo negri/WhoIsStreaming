@@ -28,7 +28,7 @@ namespace Negri.Twitch.Commands
             console.Output.WriteLine("Id              Game");
             foreach (var g in games)
             {
-                console.Output.WriteLine($"{g.Id.PadRight(15)} {g.Name}");
+                console.Output.WriteLine($"{g.Id,-15} {g.Name}");
             }
 
 

@@ -13,7 +13,7 @@ namespace Negri.Twitch.Commands
     [Command("Collect", Description = "Collect who is streaming a given game at this moment.")]
     public class Collect : ICommand
     {
-        private AppSettings _appSettings;
+        private readonly AppSettings _appSettings;
 
         public Collect(AppSettings appSettings)
         {
@@ -31,6 +31,9 @@ namespace Negri.Twitch.Commands
 
         [CommandOption("MinViewers", 'v', Description = "Minimum numbers of viewers to save.")]
         public int MinViewers { get; set; } = 0;
+
+        [CommandOption("MinViewersForThumbnails", Description = "Minimum numbers of viewers to save.")]
+        public int MinViewersForThumbnails { get; set; } = 0;
 
         public ValueTask ExecuteAsync(IConsole console)
         {
@@ -51,7 +54,7 @@ namespace Negri.Twitch.Commands
             }
             catch (Exception ex)
             {
-                throw new CommandException($"The data directory '{DataDir}' is not writable.", (int)ReturnCode.DataDirectoryNotWritable);
+                throw new CommandException($"The data directory '{DataDir}' is not writable: {ex.Message}", (int)ReturnCode.DataDirectoryNotWritable);
             }
 
             // Check the game
@@ -74,17 +77,19 @@ namespace Negri.Twitch.Commands
             var now = DateTime.UtcNow;
             if (SaveThumbnails)
             {
+                var streamsToGetThumbs = streams.Where(s => s.ViewerCount >= MinViewersForThumbnails).ToArray();
+
                 console.Output.WriteLine("Downloading thumbnails, it may take a while...");
                 var thumbFolder = Path.Combine(DataDir, $"Thumb.{game.Id}.{now:yyyy-MM-dd.HHmmss}");
                 Directory.CreateDirectory(thumbFolder);
 
-                int count = 0;
+                var count = 0;
                 
-                Parallel.ForEach(streams, (s, ps, loopCount) =>
+                Parallel.ForEach(streamsToGetThumbs, (s, ps, loopCount) =>
                 {
                     Interlocked.Increment(ref count);
 
-                    console.Output.WriteLine($"Downloading thumbnail {count} out of {streams.Length}...");
+                    console.Output.WriteLine($"Downloading thumbnail {count} out of {streamsToGetThumbs.Length}...");
                     var thumbFile = Path.Combine(thumbFolder, $"{s.ViewerCount:0000000}.{s.UserName}.jpg");
                     client.DownloadFile(s.ThumbnailUrl, thumbFile, 300, 200);
                     s.ThumbnailFile = thumbFile;
@@ -94,10 +99,10 @@ namespace Negri.Twitch.Commands
 
             var sb = new StringBuilder();
 
-            sb.AppendLine("User Id,User Name,Language,Viewers,Thumbnail File,Title");
+            sb.AppendLine("User Id,User Name,Language,Viewers,Started At,Running Minutes,Thumbnail File,Title");
             foreach (var s in streams)
             {
-                sb.AppendLine($"\"{s.UserId}\",\"{s.UserName}\",\"{s.Language}\",{s.ViewerCount},{s.StartedAt:yyyy-MM-dd HH:mm:ss},\"{s.ThumbnailFile}\",\"{s.NormalizedTitle}\"");
+                sb.AppendLine($"\"{s.UserId}\",\"{s.UserName}\",\"{s.Language}\",{s.ViewerCount},{s.StartedAt:yyyy-MM-dd HH:mm:ss},{(now-s.StartedAt).TotalMinutes:0},\"{s.ThumbnailFile}\",\"{s.NormalizedTitle}\"");
             }
 
             var fileName = Path.Combine(DataDir, $"WIS.{game.Id}.{now:yyyy-MM-dd.HHmmss}.csv");

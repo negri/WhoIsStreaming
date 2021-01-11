@@ -2,6 +2,7 @@
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 using CliFx;
 using Microsoft.Extensions.DependencyInjection;
 using Negri.Twitch.Commands;
@@ -10,7 +11,7 @@ namespace Negri.Twitch
 {
     abstract class Program
     {
-        static int Main(string[] args)
+        private static async Task<int> Main()
         {
 
             var appSettings = GetAppSettings();
@@ -25,13 +26,12 @@ namespace Negri.Twitch
 
             var serviceProvider = services.BuildServiceProvider();
 
-            var cab = new CliApplicationBuilder()
+            return await new CliApplicationBuilder()
                 .AddCommandsFromThisAssembly()
                 .UseTypeActivator(serviceProvider.GetService)
                 .Build()
                 .RunAsync();
 
-            return cab.Result;
         }
 
         private static AppSettings GetAppSettings()
