@@ -97,7 +97,7 @@ namespace Negri.Twitch.Commands
             sb.AppendLine("User Id,User Name,Language,Viewers,Thumbnail File,Title");
             foreach (var s in streams)
             {
-                sb.AppendLine($"{s.UserId},\"{s.UserName}\",{s.Language},{s.ViewerCount},{s.ThumbnailFile},\"{s.NormalizedTitle}\"");
+                sb.AppendLine($"\"{s.UserId}\",\"{s.UserName}\",\"{s.Language}\",{s.ViewerCount},\"{s.ThumbnailFile}\",\"{s.NormalizedTitle}\"");
             }
 
             var fileName = Path.Combine(DataDir, $"WIS.{game.Id}.{now:yyyy-MM-dd.HHmmss}.csv");
