@@ -35,5 +35,8 @@ namespace Negri.Twitch.Api
         [JsonPropertyName("started_at")]
         public DateTime StartedAt { get; set; }
 
+        public string NormalizedTitle => Title.Replace('\n', '-').Replace('\r', '-');
+
+        public string ThumbnailFile { get; set; } = string.Empty;
     }
 }

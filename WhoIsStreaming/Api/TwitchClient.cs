@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -130,6 +131,31 @@ namespace Negri.Twitch.Api
             return ss;
         }
 
+        private byte[] GetBytes(string url, string referrer = null)
+        {
+            var ss =
+                WebApiRetryPolicy.ExecuteAction(() =>
+                {
+                    var req = new HttpRequestMessage(HttpMethod.Get, url);
+                    if (!string.IsNullOrWhiteSpace(referrer))
+                    {
+                        req.Headers.Referrer = new Uri(referrer);
+                    }
+
+                    var res = _client.SendAsync(req).Result;
+                    if (!res.IsSuccessStatusCode)
+                    {
+                        throw new WebApiException(url, res.StatusCode, res.ReasonPhrase);
+                    }
+
+                    var s = res.Content.ReadAsByteArrayAsync().Result;
+                    return s;
+                });
+
+
+            return ss;
+        }
+
         public void Dispose()
         {
             _client?.Dispose();
@@ -171,6 +197,12 @@ namespace Negri.Twitch.Api
             }
 
             return finalList;
+        }
+
+        public void DownloadFile(string url, string file, int width, int height)
+        {
+            url = url.Replace("{width}", width.ToString()).Replace("{height}", height.ToString());
+            File.WriteAllBytes(file, GetBytes(url));
         }
     }
 }

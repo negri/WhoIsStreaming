@@ -2,7 +2,7 @@
   "profiles": {
     "WhoIsStreaming": {
       "commandName": "Project",
-      "commandLineArgs": "Collect 27546 --DataDir \"c:\\tmp\\wis\" --SaveThumbnails --MinViewers 10"
+      "commandLineArgs": "Collect 499551 --DataDir \"c:\\tmp\\wis\" --SaveThumbnails --MinViewers 1"
     }
   }
 }

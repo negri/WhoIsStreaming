@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using CliFx;
 using CliFx.Attributes;
@@ -69,6 +71,39 @@ namespace Negri.Twitch.Commands
                 console.Output.WriteLine($"{s.UserName,-30} {s.Language,-8} {s.ViewerCount,7:N0}");
             }
 
+            var now = DateTime.UtcNow;
+            if (SaveThumbnails)
+            {
+                console.Output.WriteLine("Downloading thumbnails, it may take a while...");
+                var thumbFolder = Path.Combine(DataDir, $"Thumb.{game.Id}.{now:yyyy-MM-dd.HHmmss}");
+                Directory.CreateDirectory(thumbFolder);
+
+                int count = 0;
+                
+                Parallel.ForEach(streams, (s, ps, loopCount) =>
+                {
+                    Interlocked.Increment(ref count);
+
+                    console.Output.WriteLine($"Downloading thumbnail {count} out of {streams.Length}...");
+                    var thumbFile = Path.Combine(thumbFolder, $"{s.ViewerCount:0000000}.{s.UserName}.jpg");
+                    client.DownloadFile(s.ThumbnailUrl, thumbFile, 300, 200);
+                    s.ThumbnailFile = thumbFile;
+                });
+                
+            }
+
+            var sb = new StringBuilder();
+
+            sb.AppendLine("User Id,User Name,Language,Viewers,Thumbnail File,Title");
+            foreach (var s in streams)
+            {
+                sb.AppendLine($"{s.UserId},\"{s.UserName}\",{s.Language},{s.ViewerCount},{s.ThumbnailFile},\"{s.NormalizedTitle}\"");
+            }
+
+            var fileName = Path.Combine(DataDir, $"WIS.{game.Id}.{now:yyyy-MM-dd.HHmmss}.csv");
+            File.WriteAllText(fileName, sb.ToString(), Encoding.UTF8);
+
+            console.Output.WriteLine($"Data collected on file '{fileName}' for {streams.Length:N0} streamers.");
 
 
             return default;
