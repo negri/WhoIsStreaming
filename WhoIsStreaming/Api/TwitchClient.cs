@@ -3,10 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Negri.Twitch.Api
 {
@@ -14,21 +11,21 @@ namespace Negri.Twitch.Api
     {
         private readonly string _clientId;
         private readonly string _clientSecret;
-        
+
+        private readonly HttpClient _client = new HttpClient {BaseAddress = new Uri("https://api.twitch.tv/helix/")};
+
         public TwitchClient(string clientId, string clientSecret)
         {
             _clientId = clientId;
             _clientSecret = clientSecret;
         }
 
-        private HttpClient _client = new HttpClient { BaseAddress = new Uri("https://api.twitch.tv/helix/") };
-
         public void Logon()
         {
             var url = $"https://id.twitch.tv/oauth2/token?client_id={_clientId}&client_secret={_clientSecret}&grant_type=client_credentials";
             var s = Post(url, null);
 
-            
+
             var r = JsonSerializer.Deserialize<Token>(s);
             if (r == null)
             {
@@ -48,7 +45,6 @@ namespace Negri.Twitch.Api
 
         public IEnumerable<Game> SearchGame(string game)
         {
-            
             var results = new List<Game>();
 
             var s = Get($"search/categories?query={game}&first=100");
@@ -73,9 +69,15 @@ namespace Negri.Twitch.Api
             return results;
         }
 
+        public Game GetGame(string id)
+        {
+            var s = Get($"games?id={id}");
+            var r = JsonSerializer.Deserialize<SearchGameResponse>(s);
+            return r?.Data[0];
+        }
+
         private string Post(string url, object post, string referrer = null)
         {
-            
             var ss = WebApiRetryPolicy.ExecuteAction(() =>
             {
                 var req = new HttpRequestMessage(HttpMethod.Post, url);
@@ -99,13 +101,12 @@ namespace Negri.Twitch.Api
                 return s;
             });
 
-            
+
             return ss;
         }
 
         private string Get(string url, string referrer = null)
         {
-            
             var ss =
                 WebApiRetryPolicy.ExecuteAction(() =>
                 {
@@ -125,7 +126,7 @@ namespace Negri.Twitch.Api
                     return s;
                 });
 
-            
+
             return ss;
         }
 
@@ -134,5 +135,42 @@ namespace Negri.Twitch.Api
             _client?.Dispose();
         }
 
+        public IEnumerable<Stream> GetStreams(string id)
+        {
+            var results = new List<Stream>();
+
+            var s = Get($"streams?game_id={id}&first=100");
+            do
+            {
+                var r = JsonSerializer.Deserialize<GetStreamsResponse>(s);
+                if (r?.Data != null)
+                {
+                    results.AddRange(r.Data);
+                }
+
+                if (!string.IsNullOrWhiteSpace(r?.Pagination?.Cursor))
+                {
+                    s = Get($"streams?game_id={id}&first=100&after={r.Pagination.Cursor}");
+                }
+                else
+                {
+                    break;
+                }
+            } while (true);
+
+            var hash = new HashSet<string>();
+
+            var finalList = new List<Stream>(results.Count);
+            foreach (var st in results.OrderByDescending(st => st.ViewerCount))
+            {
+                if (!hash.Contains(st.UserId))
+                {
+                    finalList.Add(st);
+                    hash.Add(st.UserId);
+                }
+            }
+
+            return finalList;
+        }
     }
 }

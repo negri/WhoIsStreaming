@@ -2,7 +2,7 @@
   "profiles": {
     "WhoIsStreaming": {
       "commandName": "Project",
-      "commandLineArgs": "SearchGame \"Tanks\""
+      "commandLineArgs": "Collect 27546 --DataDir \"c:\\tmp\\wis\" --SaveThumbnails --MinViewers 10"
     }
   }
 }

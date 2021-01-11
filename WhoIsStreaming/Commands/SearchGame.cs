@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using CliFx;
 using CliFx.Attributes;
-using CliFx.Exceptions;
 
 namespace Negri.Twitch.Commands
 {
@@ -35,10 +34,5 @@ namespace Negri.Twitch.Commands
 
             return default;
         }
-    }
-
-    public enum ReturnCode
-    {
-        NotImplemented = 1,
     }
 }
