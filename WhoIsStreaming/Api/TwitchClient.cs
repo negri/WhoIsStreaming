@@ -48,15 +48,29 @@ namespace Negri.Twitch.Api
 
         public IEnumerable<Game> SearchGame(string game)
         {
-            var s = Get($"search/categories?query={game}");
             
-            var r = JsonSerializer.Deserialize<SearchGameResponse>(s);
-            if (r == null)
-            {
-                return Enumerable.Empty<Game>();
-            }
+            var results = new List<Game>();
 
-            return r.Data ?? Enumerable.Empty<Game>();
+            var s = Get($"search/categories?query={game}&first=100");
+            do
+            {
+                var r = JsonSerializer.Deserialize<SearchGameResponse>(s);
+                if (r?.Data != null)
+                {
+                    results.AddRange(r.Data);
+                }
+
+                if (!string.IsNullOrWhiteSpace(r?.Pagination?.Cursor))
+                {
+                    s = Get($"search/categories?query={game}&first=100&after={r.Pagination.Cursor}");
+                }
+                else
+                {
+                    break;
+                }
+            } while (true);
+
+            return results;
         }
 
         private string Post(string url, object post, string referrer = null)
