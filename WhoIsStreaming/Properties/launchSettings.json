@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "WhoIsStreaming": {
+      "commandName": "Project",
+      "commandLineArgs": "SearchGame \"Tanks\""
+    }
+  }
+}
