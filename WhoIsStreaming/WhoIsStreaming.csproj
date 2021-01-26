@@ -12,6 +12,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="iconfinder_28-Twitch_3377033.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="CliFx" Version="1.6.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.1" />
   </ItemGroup>

@@ -10,7 +10,7 @@ using CliFx.Exceptions;
 
 namespace Negri.Twitch.Commands
 {
-    [Command("Collect", Description = "Collect who is streaming a given game at this moment.")]
+    [Command(nameof(Collect), Description = "Collect who is streaming a given game at this moment.")]
     public class Collect : ICommand
     {
         private readonly AppSettings _appSettings;
@@ -23,16 +23,16 @@ namespace Negri.Twitch.Commands
         [CommandParameter(0, Name = "game", Description = "Game id to retrieve streamers.")]
         public string Game { get; set; }
 
-        [CommandOption("DataDir", 'd', Description = "The directory where to write collected data.", EnvironmentVariableName = "WhoIsStreamingDataDir", IsRequired = true)]
+        [CommandOption("data-dir", 'd', Description = "The directory where to write collected data.", EnvironmentVariableName = "who-is-streaming-data-dir")]
         public string DataDir { get; set; }
 
-        [CommandOption("SaveThumbnails", 't', Description = "If thumbnails should be saved.")]
+        [CommandOption("save-thumbs", 't', Description = "If thumbnails should be saved.")]
         public bool SaveThumbnails { get; set; } = false;
 
-        [CommandOption("MinViewers", 'v', Description = "Minimum numbers of viewers to save.")]
+        [CommandOption("min-viewers", 'v', Description = "Minimum numbers of viewers to save.")]
         public int MinViewers { get; set; } = 0;
 
-        [CommandOption("MinViewersForThumbnails", Description = "Minimum numbers of viewers to save.")]
+        [CommandOption("min-viewers-thumbs", Description = "Minimum numbers of viewers to save.")]
         public int MinViewersForThumbnails { get; set; } = 0;
 
         public ValueTask ExecuteAsync(IConsole console)
@@ -40,21 +40,26 @@ namespace Negri.Twitch.Commands
             var client = new Api.TwitchClient(_appSettings.ClientId, _appSettings.ClientSecret);
             client.Logon();
 
-            if (!Directory.Exists(DataDir))
+            var saveFiles = false;
+            if (!string.IsNullOrWhiteSpace(DataDir))
             {
-                throw new CommandException($"The data directory '{DataDir}' does not exists.", (int)ReturnCode.DataDirectoryDoesNotExists);
-            }
+                if (!Directory.Exists(DataDir))
+                {
+                    throw new CommandException($"The data directory '{DataDir}' does not exists.", (int) ReturnCode.DataDirectoryDoesNotExists);
+                }
 
-            // Is writable?
-            var testFile = Path.Combine(DataDir, "WriteTestFile.txt");
-            try
-            {
-                File.WriteAllText(testFile, "Yup! It works!");
-                File.Delete(testFile);
-            }
-            catch (Exception ex)
-            {
-                throw new CommandException($"The data directory '{DataDir}' is not writable: {ex.Message}", (int)ReturnCode.DataDirectoryNotWritable);
+                // Is writable?
+                var testFile = Path.Combine(DataDir, "WriteTestFile.txt");
+                try
+                {
+                    File.WriteAllText(testFile, "Yup! It works!");
+                    File.Delete(testFile);
+                }
+                catch (Exception ex)
+                {
+                    throw new CommandException($"The data directory '{DataDir}' is not writable: {ex.Message}", (int) ReturnCode.DataDirectoryNotWritable);
+                }
+                saveFiles = true;
             }
 
             // Check the game
@@ -72,6 +77,11 @@ namespace Negri.Twitch.Commands
             foreach (var s in streams)
             {
                 console.Output.WriteLine($"{s.UserName,-30} {s.Language,-8} {s.ViewerCount,7:N0}");
+            }
+
+            if (!saveFiles)
+            {
+                return default;
             }
 
             var now = DateTime.UtcNow;
