@@ -2,7 +2,7 @@
   "profiles": {
     "WhoIsStreaming": {
       "commandName": "Project",
-      "commandLineArgs": "Report 16676 --DataDir"
+      "commandLineArgs": "Report 16676 --data-dir \"P:\\tmp\\WhoIsStreaming\\Data\" -e \"P:\\tmp\\WhoIsStreaming\\TF.xlsx\""
     }
   }
 }

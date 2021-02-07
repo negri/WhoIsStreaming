@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <PackageReference Include="CliFx" Version="1.6.0" />
+    <PackageReference Include="CsvHelper" Version="22.1.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.1" />
   </ItemGroup>
 

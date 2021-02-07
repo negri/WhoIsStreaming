@@ -8,6 +8,7 @@
         GameNotFound = 4,
         ThreeDateParameters = 5,
         MissingDateParameters = 6,
-        InvalidDateParameters = 7
+        InvalidDateParameters = 7,
+        NoObservations = 8
     }
 }
