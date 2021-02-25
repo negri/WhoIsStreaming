@@ -94,12 +94,15 @@ namespace Negri.Twitch.Commands
                 Directory.CreateDirectory(thumbFolder);
 
                 var count = 0;
+                var messageLock = new object();
                 
                 Parallel.ForEach(streamsToGetThumbs, (s, ps, loopCount) =>
                 {
                     Interlocked.Increment(ref count);
-
-                    console.Output.WriteLine($"Downloading thumbnail {count} out of {streamsToGetThumbs.Length}...");
+                    lock (messageLock)
+                    {
+                        console.Output.WriteLine($"Downloading thumbnail {count} out of {streamsToGetThumbs.Length}...");
+                    }
                     var thumbFile = Path.Combine(thumbFolder, $"{s.ViewerCount:0000000}.{s.UserName}.jpg");
                     client.DownloadFile(s.ThumbnailUrl, thumbFile, 300, 200);
                     s.ThumbnailFile = thumbFile;
