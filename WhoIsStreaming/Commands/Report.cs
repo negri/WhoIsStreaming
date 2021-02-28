@@ -11,6 +11,7 @@ using CliFx.Exceptions;
 using CsvHelper;
 using CsvHelper.Configuration;
 using CsvHelper.Configuration.Attributes;
+using JetBrains.Annotations;
 using Negri.Twitch.Api;
 using OfficeOpenXml;
 
@@ -26,14 +27,16 @@ namespace Negri.Twitch.Commands
             _appSettings = appSettings;
         }
 
+        [PublicAPI]
         [CommandParameter(0, Name = "game", Description = "Game id to report.")]
         public string Game { get; set; }
 
+        [PublicAPI]
         [CommandOption("excel-file", 'e', Description = "The Excel report to write.")]
         public string ExcelFile { get; set; }
 
-        [CommandOption("data-dir", 'd', Description = "The directory where to read collected data.", EnvironmentVariableName = "who-is-streaming-data-dir",
-            IsRequired = true)]
+        [PublicAPI]
+        [CommandOption("data-dir", 'd', Description = "The directory where to read collected data.", EnvironmentVariableName = "who-is-streaming-data-dir", IsRequired = true)]
         public string DataDir { get; set; } = string.Empty;
 
         [CommandOption("start", Description = "The start moment to report.")]
@@ -45,8 +48,9 @@ namespace Negri.Twitch.Commands
         [CommandOption("period", 'p', Description = "The most recent period to report.")]
         public ReportPeriod? Period { get; set; }
 
+        [PublicAPI]
         [CommandOption("use-utc", 'u', Description = "All input dates are in UTC.")]
-        public bool UseUtc { get; set; } = false;
+        public bool UseUtc { get; set; }
 
         public ValueTask ExecuteAsync(IConsole console)
         {
@@ -91,7 +95,7 @@ namespace Negri.Twitch.Commands
                 throw new CommandException("No streams where found.", (int) ReturnCode.NoObservations);
             }
 
-            var sessions = GetSessions(observations.OrderBy(o => o.Moment)).OrderByDescending(s => s.Observations).ToList();
+            var sessions = GetSessions(observations.OrderBy(o => o.Moment)).OrderByDescending(s => s.ViewersMinutes).ToList();
             console.Output.WriteLine($"{sessions.Count:N0} sessions found for a total of {sessions.Sum(s => s.Duration.TotalHours):N0} hours.");
 
             console.Output.WriteLine("Streamer                       Language Avg Viewers Max Viewers Duration");
@@ -102,6 +106,7 @@ namespace Negri.Twitch.Commands
 
             if (!string.IsNullOrWhiteSpace(ExcelFile))
             {
+                console.Output.WriteLine($"Creating Excel report at {ExcelFile}...");
                 WriteExcel(game.Name, observations, sessions);
                 console.Output.WriteLine($"Excel report saved on '{ExcelFile}'.");
             }
@@ -109,7 +114,7 @@ namespace Negri.Twitch.Commands
             return default;
         }
 
-        private void WriteExcel(string gameName, List<Observation> observations, List<Session> sessions)
+        private void WriteExcel(string gameName, IEnumerable<Observation> observations, IEnumerable<Session> sessions)
         {
             var templateFile = Path.Combine(AppContext.BaseDirectory, "Template.xlsx");
 
@@ -129,16 +134,20 @@ namespace Negri.Twitch.Commands
                 sessionsSheet.Cells[row, 4].Value = UseUtc ? session.Start : session.Start.ToLocalTime();
                 sessionsSheet.Cells[row, 5].Value = UseUtc ? session.End : session.End.ToLocalTime();
                 sessionsSheet.Cells[row, 6].FormulaR1C1 = "=RC[-1]-RC[-2]";
-                sessionsSheet.Cells[row, 7].Value = session.MaxViewers;
-                sessionsSheet.Cells[row, 8].Value = session.AverageViewers;
-                sessionsSheet.Cells[row, 9].Value = session.Observations;
-                sessionsSheet.Cells[row, 10].Value = session.Title;
+                sessionsSheet.Cells[row, 7].FormulaR1C1 = "=RC[-1]*24*RC[2]";
+                sessionsSheet.Cells[row, 8].Value = session.MaxViewers;
+                sessionsSheet.Cells[row, 9].Value = session.AverageViewers;
+                sessionsSheet.Cells[row, 10].Value = session.Observations;
+                sessionsSheet.Cells[row, 11].Value = session.Title;
 
                 ++row;
             }
 
             sessionsSheet.Cells[4, 2].FormulaR1C1 = $"=MIN(R8C4:R{row - 1}C4)";
             sessionsSheet.Cells[5, 2].FormulaR1C1 = $"=MAX(R8C5:R{row - 1}C5)";
+
+            sessionsSheet.Cells[7, 1, row - 1, 11].AutoFilter = true;
+            sessionsSheet.Cells[7, 2, row - 1, 11].AutoFitColumns();
 
             // The observations
             var observationsSheet = package.Workbook.Worksheets["Observations"];
@@ -162,6 +171,8 @@ namespace Negri.Twitch.Commands
             observationsSheet.Cells[4, 2].FormulaR1C1 = $"=MIN(R8C4:R{row - 1}C4)";
             observationsSheet.Cells[5, 2].FormulaR1C1 = $"=MAX(R8C5:R{row - 1}C5)";
 
+            observationsSheet.Cells[7, 1, row - 1, 8].AutoFilter = true;
+            observationsSheet.Cells[7, 2, row - 1, 8].AutoFitColumns();
 
             var destFile = new FileInfo(ExcelFile);
             package.SaveAs(destFile);
@@ -295,9 +306,9 @@ namespace Negri.Twitch.Commands
             public int AverageViewers => _cumulativeViewers / Observations;
             public int MaxViewers { get; private set; }
 
-            
-
             public TimeSpan Duration => End - Start;
+
+            public int ViewersMinutes => (int) (AverageViewers * Duration.TotalMinutes);
 
             public void Add(Observation o)
             {
@@ -322,6 +333,7 @@ namespace Negri.Twitch.Commands
             }
         }
 
+        [PublicAPI]
         private record Observation
         {
             [Name("User Id")] public long UserId { get; init; }

@@ -14,11 +14,10 @@ namespace Negri.Twitch.Api
             return false;
         }
 
-        public static T ExecuteAction<T>(Func<T> func, int? maxTries = null,
-            Action<int, TimeSpan, Exception> beforeWaitAction = null)
+        public static T ExecuteAction<T>(Func<T> func, int? maxTries = null)
         {
             var rp = new ExponentialRetryPolicy(TimeSpan.FromMilliseconds(100));
-            return rp.ExecuteAction<T>(func, maxTries ?? 10, isTransientError: IsTransientError);
+            return rp.ExecuteAction(func, maxTries ?? 10, isTransientError: IsTransientError);
         }
     }
 }

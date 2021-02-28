@@ -15,6 +15,11 @@ namespace Negri.Twitch
         {
 
             var appSettings = GetAppSettings();
+            if (appSettings == null)
+            {
+                await Console.Error.WriteLineAsync("The required file secrets.json could not be found. Put it alongside the application, or on the start path of the application.");
+                return (int)ReturnCode.NoSecrets;
+            }
 
             var services = new ServiceCollection();
 
@@ -39,6 +44,11 @@ namespace Negri.Twitch
 
         private static AppSettings GetAppSettings()
         {
+            if (!File.Exists("secrets.json"))
+            {
+                return null;
+            }
+
             var content = File.ReadAllText("secrets.json", Encoding.UTF8);
 
             var o = new JsonSerializerOptions()

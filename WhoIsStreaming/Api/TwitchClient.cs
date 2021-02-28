@@ -13,7 +13,7 @@ namespace Negri.Twitch.Api
         private readonly string _clientId;
         private readonly string _clientSecret;
 
-        private readonly HttpClient _client = new HttpClient {BaseAddress = new Uri("https://api.twitch.tv/helix/")};
+        private readonly HttpClient _client = new() {BaseAddress = new Uri("https://api.twitch.tv/helix/")};
 
         public TwitchClient(string clientId, string clientSecret)
         {

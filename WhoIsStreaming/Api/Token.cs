@@ -1,7 +1,9 @@
 ﻿using System.Text.Json.Serialization;
+using JetBrains.Annotations;
 
 namespace Negri.Twitch.Api
 {
+    [PublicAPI]
     public class Token
     {
         [JsonPropertyName("access_token")]

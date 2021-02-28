@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using CliFx;
 using CliFx.Attributes;
 using CliFx.Exceptions;
+using JetBrains.Annotations;
 
 namespace Negri.Twitch.Commands
 {
@@ -20,20 +21,25 @@ namespace Negri.Twitch.Commands
             _appSettings = appSettings;
         }
 
+        [PublicAPI]
         [CommandParameter(0, Name = "game", Description = "Game id to retrieve streamers.")]
         public string Game { get; set; }
 
+        [PublicAPI]
         [CommandOption("data-dir", 'd', Description = "The directory where to write collected data.", EnvironmentVariableName = "who-is-streaming-data-dir")]
         public string DataDir { get; set; }
 
+        [PublicAPI]
         [CommandOption("save-thumbs", 't', Description = "If thumbnails should be saved.")]
-        public bool SaveThumbnails { get; set; } = false;
+        public bool SaveThumbnails { get; set; }
 
+        [PublicAPI]
         [CommandOption("min-viewers", 'v', Description = "Minimum numbers of viewers to save.")]
-        public int MinViewers { get; set; } = 0;
+        public int MinViewers { get; set; }
 
+        [PublicAPI]
         [CommandOption("min-viewers-thumbs", Description = "Minimum numbers of viewers to save.")]
-        public int MinViewersForThumbnails { get; set; } = 0;
+        public int MinViewersForThumbnails { get; set; }
 
         public ValueTask ExecuteAsync(IConsole console)
         {
@@ -73,7 +79,7 @@ namespace Negri.Twitch.Commands
 
             var streams = client.GetStreams(game.Id).Where(s => s.ViewerCount >= MinViewers).ToArray();
 
-            console.Output.WriteLine($"Streamer                       Language Viewers");
+            console.Output.WriteLine("Streamer                       Language Viewers");
             foreach (var s in streams)
             {
                 console.Output.WriteLine($"{s.UserName,-30} {s.Language,-8} {s.ViewerCount,7:N0}");
@@ -96,7 +102,7 @@ namespace Negri.Twitch.Commands
                 var count = 0;
                 var messageLock = new object();
                 
-                Parallel.ForEach(streamsToGetThumbs, (s, ps, loopCount) =>
+                Parallel.ForEach(streamsToGetThumbs, (s, _, _) =>
                 {
                     Interlocked.Increment(ref count);
                     lock (messageLock)

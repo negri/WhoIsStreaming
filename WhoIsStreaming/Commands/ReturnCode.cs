@@ -9,6 +9,7 @@
         ThreeDateParameters = 5,
         MissingDateParameters = 6,
         InvalidDateParameters = 7,
-        NoObservations = 8
+        NoObservations = 8,
+        NoSecrets = 9
     }
 }

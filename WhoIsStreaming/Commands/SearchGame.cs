@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using CliFx;
 using CliFx.Attributes;
+using JetBrains.Annotations;
 
 namespace Negri.Twitch.Commands
 {
@@ -15,6 +16,7 @@ namespace Negri.Twitch.Commands
             _appSettings = appSettings;
         }
 
+        [PublicAPI]
         [CommandParameter(0, Name = "game", Description = "part of the name of the game to search for.")]
         public string GameName { get; set; }
 

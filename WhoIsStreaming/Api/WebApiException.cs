@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Net;
+using JetBrains.Annotations;
 
 namespace Negri.Twitch.Api
 {
     /// <summary>
     /// Exceção quando uma API Web falhar por erros na chamada
     /// </summary>
+    [PublicAPI]
     public class WebApiException : ApplicationException
     {
         public string Url { get; }
