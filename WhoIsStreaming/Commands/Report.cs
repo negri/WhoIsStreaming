@@ -52,6 +52,10 @@ namespace Negri.Twitch.Commands
         [CommandOption("use-utc", 'u', Description = "All input dates are in UTC.")]
         public bool UseUtc { get; set; }
 
+        [PublicAPI]
+        [CommandOption("verbose", Description = "Verbose output as the report runs.")]
+        public bool Verbose { get; set; } = false;
+
         public ValueTask ExecuteAsync(IConsole console)
         {
             FixDates();
@@ -77,16 +81,30 @@ namespace Negri.Twitch.Commands
                 ? $"Generating reports for streams from {Start} to {End} in game {game.Name}..."
                 : $"Generating reports for streams from {Start.Value.ToLocalTime()} to {End.Value.ToLocalTime()} in game {game.Name}...");
 
+            Debug.Assert(Start != null, nameof(Start) + " != null");
+            Debug.Assert(End != null, nameof(End) + " != null");
+            var minFileMoment = Start.Value.AddHours(-1);
+            var maxFileMoment = End.Value.AddHours(1);
 
             var di = new DirectoryInfo(DataDir);
             var mask = $"WIS.{Game}.????-??-??.??????.csv";
             var observations = new List<Observation>();
             foreach (var fi in di.EnumerateFiles(mask, SearchOption.TopDirectoryOnly))
             {
-                Debug.Assert(Start != null, nameof(Start) + " != null");
-                Debug.Assert(End != null, nameof(End) + " != null");
+                var momentPart = fi.Name.Substring(fi.Name.Length - 21);
+                momentPart = momentPart.Substring(0, 17);
+                // ReSharper disable once StringLiteralTypo
+                var moment = DateTime.ParseExact(momentPart, "yyyy-MM-dd.HHmmss", CultureInfo.InvariantCulture);
 
-                observations.AddRange(ReadFile(fi.FullName, Start.Value, End.Value));
+                if (minFileMoment <= moment && moment <= maxFileMoment)
+                {
+                    if (Verbose)
+                    {
+                        console.Output.WriteLine($"  reading file {fi.Name}...");
+                    }
+                    observations.AddRange(ReadFile(fi.FullName, Start.Value, End.Value));
+                }
+                
             }
 
             console.Output.WriteLine($"{observations.Count:N0} observations found, building sessions...");
@@ -104,17 +122,27 @@ namespace Negri.Twitch.Commands
                 console.Output.WriteLine($"{s.UserName,-30} {s.Language,-8} {s.AverageViewers,11:N0} {s.MaxViewers,11:N0} {s.Duration,8:c}");
             }
 
+            // Calculates The Hourly Average Viewers 
+            var hourlyById = from g in observations.GroupBy(o => (hour: o.MomentHour, userId: o.UserId))
+                let avgViewers = g.Average(o => o.Viewers)
+                select (g.Key.hour, g.Key.userId, avgViewers);
+
+            var hourly = from g in hourlyById.GroupBy(hid => hid.hour)
+                let streamersCount = g.Count()
+                let avgViewers = g.Sum(hid => hid.avgViewers)
+                select new Hourly(g.Key, streamersCount, (int)avgViewers);
+
             if (!string.IsNullOrWhiteSpace(ExcelFile))
             {
                 console.Output.WriteLine($"Creating Excel report at {ExcelFile}...");
-                WriteExcel(game.Name, observations, sessions);
+                WriteExcel(game.Name, observations, sessions, hourly);
                 console.Output.WriteLine($"Excel report saved on '{ExcelFile}'.");
             }
 
             return default;
         }
 
-        private void WriteExcel(string gameName, IEnumerable<Observation> observations, IEnumerable<Session> sessions)
+        private void WriteExcel(string gameName, IEnumerable<Observation> observations, IEnumerable<Session> sessions, IEnumerable<Hourly> viewership)
         {
             var templateFile = Path.Combine(AppContext.BaseDirectory, "Template.xlsx");
 
@@ -173,6 +201,19 @@ namespace Negri.Twitch.Commands
 
             observationsSheet.Cells[7, 1, row - 1, 8].AutoFilter = true;
             observationsSheet.Cells[7, 2, row - 1, 8].AutoFitColumns();
+
+            // Total Viewership 
+            var viewershipSheet = package.Workbook.Worksheets["Viewership"];
+            viewershipSheet.Cells[2, 1].Value = gameName;
+
+            row = 8;
+            foreach (var v in viewership)
+            {
+                viewershipSheet.Cells[row, 1].Value = UseUtc ? v.Hour : v.Hour.ToLocalTime();
+                viewershipSheet.Cells[row, 2].Value = v.Streamers;
+                viewershipSheet.Cells[row, 3].Value = v.AvgViewers;
+                ++row;
+            }
 
             var destFile = new FileInfo(ExcelFile);
             package.SaveAs(destFile);
@@ -289,6 +330,8 @@ namespace Negri.Twitch.Commands
             }
         }
 
+        private record Hourly(DateTime Hour, int Streamers, int AvgViewers);
+        
         private class Session
         {
             private readonly Dictionary<string, int> _titles = new(2);
@@ -352,6 +395,15 @@ namespace Negri.Twitch.Commands
             public string Title { get; init; }
 
             public DateTime Moment => Start.AddMinutes(Minutes);
+
+            public DateTime MomentHour
+            {
+                get
+                {
+                    var m = Moment;
+                    return new DateTime(m.Year, m.Month, m.Day, m.Hour, 0, 0, m.Kind);
+                }
+            }
         }
     }
 }
