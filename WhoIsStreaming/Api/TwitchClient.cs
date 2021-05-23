@@ -74,7 +74,15 @@ namespace Negri.Twitch.Api
         {
             var s = Get($"games?id={id}");
             var r = JsonSerializer.Deserialize<SearchGameResponse>(s);
-            return r?.Data[0];
+            if (r == null) 
+            {
+                return null;
+            }
+            if (r.Data.Length <= 0) 
+            {
+                return null;
+            }
+            return r.Data[0];
         }
 
         private string Post(string url, object post, string referrer = null)
