@@ -32,6 +32,9 @@ namespace Negri.Twitch
             services.AddTransient(p =>
                 new Report(appSettings));
 
+            services.AddTransient(_ =>
+                new Licenses());
+
             var serviceProvider = services.BuildServiceProvider();
 
             return await new CliApplicationBuilder()
