@@ -8,7 +8,6 @@ public class Licenses : ICommand
 {
     public ValueTask ExecuteAsync (IConsole console) 
     {
-        console.Output.WriteLine("blqldopfj");
         try 
         {
             var fileContents = File.ReadAllLines("Licenses.txt");
